@@ -1,0 +1,17 @@
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\config\PasswordEncoderConfig.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\config\SecurityConfig.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\controller\AuthController.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\dto\ErrorResponse.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\dto\LoginRequest.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\dto\RegisterRequest.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\exception\AccountLockedException.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\exception\GlobalExceptionHandler.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\exception\InvalidCredentialsException.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\exception\UserAlreadyExistsException.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\LoginAndRegisterApplication.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\model\User.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\repository\InMemoryUserRepository.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\repository\UserRepository.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\service\AuthService.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\service\AuthServiceImpl.java
+C:\Users\exery\Documents\MyProject\loginAndRegister\src\main\java\com\security\auth\service\LoginAttemptService.java
