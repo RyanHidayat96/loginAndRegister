@@ -3,6 +3,7 @@ package com.security.auth.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.security.auth.validation.Utf8ByteLength;
 
 /**
  * Data Transfer Object for user login requests.
@@ -16,6 +17,8 @@ public class LoginRequest {
     private String email;
 
     @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Utf8ByteLength(max = 72, message = "Password cannot exceed 72 UTF-8 bytes")
     private String password;
 
     public LoginRequest() {

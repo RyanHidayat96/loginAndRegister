@@ -7,12 +7,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /**
  * Spring Security configuration.
@@ -27,8 +25,8 @@ public class SecurityConfig {
         http
             // Disable CSRF for stateless REST endpoints
             .csrf(AbstractHttpConfigurer::disable)
-            // Enable CORS with secure defaults
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // Cross-origin access is disabled until an explicit trusted UI origin is configured.
+            .cors(AbstractHttpConfigurer::disable)
             // Stateless session management (no session cookies created)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // Endpoints authorization rules
@@ -36,22 +34,17 @@ public class SecurityConfig {
                 .requestMatchers("/register", "/login", "/error").permitAll()
                 .anyRequest().authenticated()
             )
-            // Security Response Headers (nosniff, HSTS, frameOptions)
+            // Security response headers for an API that never serves active content.
             .headers(headers -> headers
                 .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                .contentTypeOptions(withDefaults())
+                .cacheControl(withDefaults())
+                .referrerPolicy(policy -> policy.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                .contentSecurityPolicy(policy -> policy.policyDirectives(
+                        "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+                ))
             );
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Content-Type", "Authorization"));
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }

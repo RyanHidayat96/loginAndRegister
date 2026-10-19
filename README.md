@@ -14,9 +14,9 @@ Sistem autentikasi pengguna (Registrasi & Login) berbasis **Java 21 (LTS)** dan 
    - Jika pengguna memasukkan email yang tidak terdaftar saat login, sistem secara otomatis mengeksekusi komputasi hash tiruan (*dummy hash verification*).
    - Hal ini membuat waktu respons verifikasi konstan, mencegah penyerang melakukan *User Enumeration* berdasarkan perbedaan waktu respons server.
 
-3. **Proteksi Serangan Brute-Force & Rate Limiting (*Account Lockout*)**:
+3. **Proteksi Serangan Brute-Force & Rate Limiting (*Client-Scoped Lockout*)**:
    - Sistem membatasi percobaan login yang gagal berturut-turut (maksimal 5 kali percobaan gagal).
-   - Setelah 5 kali kegagalan, akun akan dikunci sementara selama 15 menit dan mengembalikan HTTP status `429 Too Many Requests` disertai header `Retry-After`.
+   - Setelah 5 kali kegagalan, sumber klien yang sama untuk email tersebut dikunci sementara selama 15 menit dan menerima HTTP `429 Too Many Requests` disertai header `Retry-After`. Pengguna yang sah dari sumber lain tidak ikut terkunci.
 
 4. **Normalisasi Email & Thread-Safe In-Memory Storage**:
    - Penyimpanan berbasis `ConcurrentHashMap` yang aman untuk multi-threading (*thread-safe*).
@@ -24,7 +24,7 @@ Sistem autentikasi pengguna (Registrasi & Login) berbasis **Java 21 (LTS)** dan 
 
 5. **Validasi Input Ketat (Jakarta Bean Validation)**:
    - Email divalidasi dengan format RFC standar dan batas panjang (maks. 254 karakter).
-   - Password divalidasi dengan panjang minimum 8 karakter dan batas wajar maksimum 128 karakter untuk mencegah serangan *Denial of Service (DoS)* via payload raksasa.
+   - Password divalidasi dengan panjang minimum 8 karakter dan maksimum 72 byte UTF-8. Batas byte mencegah pemotongan diam-diam oleh BCrypt yang dapat menyamakan dua password berbeda.
 
 6. **Pencegahan Kebocoran Informasi (*Information Disclosure / CWE-209*)**:
    - Pesan kesalahan login diseragamkan menjadi `"Invalid email or password."` baik untuk kasus user tidak ditemukan maupun password salah.
@@ -33,7 +33,9 @@ Sistem autentikasi pengguna (Registrasi & Login) berbasis **Java 21 (LTS)** dan 
 7. **Konfigurasi HTTP Security Headers**:
    - `X-Frame-Options: DENY` (mencegah Clickjacking).
    - `X-Content-Type-Options: nosniff` (mencegah MIME confusion attacks).
+   - `Content-Security-Policy`, `Referrer-Policy: no-referrer`, dan `Cache-Control: no-store` diterapkan pada respons API.
    - `SessionCreationPolicy.STATELESS` (meniadakan risiko session fixation / session hijacking).
+   - CORS lintas-origin dinonaktifkan secara default. Jika UI berada pada origin berbeda, daftarkan origin tepercaya secara eksplisit sebelum mengaktifkannya.
 
 ---
 
@@ -131,7 +133,7 @@ Login successful
 
 ## 🧪 Menjalankan Pengujian (Testing)
 
-Proyek dilengkapi dengan 16 unit dan *integration tests* komprehensif yang memvalidasi seluruh alur positif dan skenario keamanan (*edge cases*).
+Proyek dilengkapi dengan 21 unit dan *integration tests* yang memvalidasi alur positif, kasus batas, serta kontrol keamanan utama.
 
 Jalankan perintah berikut di terminal:
 

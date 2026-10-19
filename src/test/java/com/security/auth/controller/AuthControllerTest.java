@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -102,7 +104,48 @@ class AuthControllerTest {
                         .param("email", "valid@example.com")
                         .param("password", "short"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("Password must be between 8 and 128 characters")));
+                .andExpect(content().string(containsString("Password must be at least 8 characters")));
+    }
+
+    @Test
+    @DisplayName("Should reject passwords that BCrypt would truncate")
+    void testRegisterRejectsPasswordOverBcryptByteLimit() throws Exception {
+        String passwordOverLimit = "a".repeat(73);
+
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                        .param("email", "bcrypt-limit@example.com")
+                        .param("password", passwordOverLimit))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.password")
+                        .value("Password cannot exceed 72 UTF-8 bytes"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 without details for malformed JSON")
+    void testRegisterMalformedJson() throws Exception {
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not-valid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Malformed request body"));
+    }
+
+    @Test
+    @DisplayName("Should send security headers and not grant arbitrary CORS origins")
+    void testSecurityHeadersAndCorsPolicy() throws Exception {
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                        .header("Origin", "https://untrusted.example")
+                        .param("email", "headers@example.com")
+                        .param("password", "mypassword123"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().string("Content-Security-Policy", containsString("default-src 'none'")))
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }
 
     @Test
@@ -225,6 +268,43 @@ class AuthControllerTest {
                         .param("email", testEmail)
                         .param("password", "correctPassword123"))
                 .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
                 .andExpect(content().string(containsString("temporarily locked")));
+    }
+
+    @Test
+    @DisplayName("Should scope lockout to the source client to reduce account-lockout denial of service")
+    void testLockoutIsScopedToClientAddress() throws Exception {
+        String testEmail = "client-scope@example.com";
+        String blockedClient = "198.51.100.10";
+
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                        .param("email", testEmail)
+                        .param("password", "correctPassword123"))
+                .andExpect(status().isOk());
+
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/login")
+                            .with(request -> {
+                                request.setRemoteAddr(blockedClient);
+                                return request;
+                            })
+                            .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                            .param("email", testEmail)
+                            .param("password", "wrongPassword" + i))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/login")
+                        .with(request -> {
+                            request.setRemoteAddr("198.51.100.11");
+                            return request;
+                        })
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                        .param("email", testEmail)
+                        .param("password", "correctPassword123"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Login successful"));
     }
 }

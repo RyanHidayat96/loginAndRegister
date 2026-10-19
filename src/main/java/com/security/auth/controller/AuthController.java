@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 /**
  * REST Controller providing registration and login endpoints.
  * Explicitly supports both application/x-www-form-urlencoded and application/json media types.
@@ -58,8 +60,9 @@ public class AuthController {
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = {MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_JSON_VALUE}
     )
-    public ResponseEntity<String> loginForm(@Valid @ModelAttribute LoginRequest request) {
-        String result = authService.login(request);
+    public ResponseEntity<String> loginForm(@Valid @ModelAttribute LoginRequest request,
+                                            HttpServletRequest httpRequest) {
+        String result = authService.login(request, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(result);
     }
 
@@ -68,8 +71,9 @@ public class AuthController {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = {MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_JSON_VALUE}
     )
-    public ResponseEntity<String> loginJson(@Valid @RequestBody LoginRequest request) {
-        String result = authService.login(request);
+    public ResponseEntity<String> loginJson(@Valid @RequestBody LoginRequest request,
+                                            HttpServletRequest httpRequest) {
+        String result = authService.login(request, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(result);
     }
 }

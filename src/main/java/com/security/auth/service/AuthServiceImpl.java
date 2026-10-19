@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -52,29 +53,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String register(RegisterRequest request) {
         String email = request.getEmail().trim();
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        User newUser = new User(email, hashedPassword);
 
-        if (userRepository.existsByEmail(email)) {
+        if (!userRepository.saveIfAbsent(newUser)) {
             log.warn("Registration rejected: email {} is already in use", email);
             throw new UserAlreadyExistsException("Email is already registered.");
         }
-
-        // Securely hash the password before persisting
-        String hashedPassword = passwordEncoder.encode(request.getPassword());
-        User newUser = new User(email, hashedPassword);
-        userRepository.save(newUser);
 
         log.info("New user successfully registered with email: {}", email);
         return "User registered successfully.";
     }
 
     @Override
-    public String login(LoginRequest request) {
+    public String login(LoginRequest request, String clientAddress) {
         String email = request.getEmail().trim();
         String rawPassword = request.getPassword();
+        String loginAttemptKey = loginAttemptKey(email, clientAddress);
 
-        // 1. Check if the account or IP is temporarily locked out
-        if (loginAttemptService.isBlocked(email)) {
-            long remainingSeconds = loginAttemptService.getRemainingLockoutSeconds(email);
+        // Lockout is scoped to an email and direct client address, limiting account-lockout DoS.
+        if (loginAttemptService.isBlocked(loginAttemptKey)) {
+            long remainingSeconds = loginAttemptService.getRemainingLockoutSeconds(loginAttemptKey);
             log.warn("Login attempt blocked for locked account: {}", email);
             throw new AccountLockedException(
                     "Account is temporarily locked due to excessive failed attempts. Please try again later.",
@@ -88,7 +87,7 @@ public class AuthServiceImpl implements AuthService {
         if (userOptional.isEmpty()) {
             // Timing attack mitigation: perform hash computation even if user doesn't exist
             passwordEncoder.matches(rawPassword, dummyPasswordHash);
-            loginAttemptService.loginFailed(email);
+            loginAttemptService.loginFailed(loginAttemptKey);
             log.warn("Login failed: User not found for email: {}", email);
             throw new InvalidCredentialsException("Invalid email or password.");
         }
@@ -97,17 +96,23 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. Verify password hash
         if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
-            loginAttemptService.loginFailed(email);
+            loginAttemptService.loginFailed(loginAttemptKey);
             log.warn("Login failed: Password mismatch for email: {}", email);
             throw new InvalidCredentialsException("Invalid email or password.");
         }
 
         // 4. Successful login
-        loginAttemptService.loginSucceeded(email);
+        loginAttemptService.loginSucceeded(loginAttemptKey);
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
         log.info("User logged in successfully: {}", email);
         return "Login successful";
+    }
+
+    private String loginAttemptKey(String email, String clientAddress) {
+        String normalizedEmail = email.toLowerCase(Locale.ROOT);
+        String normalizedAddress = clientAddress == null ? "" : clientAddress.trim();
+        return normalizedAddress + "\u0000" + normalizedEmail;
     }
 }

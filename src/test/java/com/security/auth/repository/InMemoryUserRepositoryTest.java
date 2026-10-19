@@ -31,6 +31,19 @@ class InMemoryUserRepositoryTest {
     }
 
     @Test
+    @DisplayName("Should atomically keep the first user for a duplicate normalized email")
+    void testSaveIfAbsentKeepsExistingUser() {
+        User original = new User("duplicate@example.com", "$2a$12$original");
+        User duplicate = new User("DUPLICATE@example.com", "$2a$12$replacement");
+
+        assertTrue(repository.saveIfAbsent(original));
+        assertFalse(repository.saveIfAbsent(duplicate));
+
+        User stored = repository.findByEmail("duplicate@example.com").orElseThrow();
+        assertEquals("$2a$12$original", stored.getPasswordHash());
+    }
+
+    @Test
     @DisplayName("Should normalize email with whitespace and mixed casing")
     void testEmailNormalization() {
         User user = new User("  User.Test@Example.COM  ", "$2a$12$hashedpassword");

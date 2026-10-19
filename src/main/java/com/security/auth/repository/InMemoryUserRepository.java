@@ -35,6 +35,13 @@ public class InMemoryUserRepository implements UserRepository {
     }
 
     @Override
+    public boolean saveIfAbsent(User user) {
+        Objects.requireNonNull(user, "User cannot be null");
+        String normalizedKey = normalizeEmail(user.getEmail());
+        return userStorage.putIfAbsent(normalizedKey, user) == null;
+    }
+
+    @Override
     public Optional<User> findByEmail(String email) {
         if (email == null) {
             return Optional.empty();

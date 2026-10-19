@@ -18,6 +18,14 @@ public interface UserRepository {
     User save(User user);
 
     /**
+     * Stores a user only when no user exists for the normalized email address.
+     *
+     * @param user the user to persist
+     * @return {@code true} when the user was stored; {@code false} when email already exists
+     */
+    boolean saveIfAbsent(User user);
+
+    /**
      * Finds a user by their email address.
      *
      * @param email the email to search for

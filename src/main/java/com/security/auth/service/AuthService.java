@@ -22,5 +22,5 @@ public interface AuthService {
      * @param request login credentials (email, password)
      * @return success message
      */
-    String login(LoginRequest request);
+    String login(LoginRequest request, String clientAddress);
 }
