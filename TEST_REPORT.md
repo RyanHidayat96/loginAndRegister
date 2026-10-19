@@ -46,17 +46,7 @@ Format JSON juga didukung sebagai tambahan, tanpa mengubah dukungan `application
 | Code Structure (30%) | Memenuhi: pemisahan controller, service, repository, DTO, konfigurasi, dan handler error jelas. |
 | Functionality & Problem Solving (30%) | Memenuhi: alur register/login, BCrypt, duplikasi, normalisasi email, race condition, dan lockout diuji. |
 | AI Prompting & Usage (30%) | Tidak dapat dinilai dari source repository saja. Dalam pekerjaan ini, perubahan dibuat setelah temuan diuji: race condition pendaftaran, batas BCrypt 72 byte, CORS wildcard, dan JSON rusak. |
-| Validation & Error Handling (10%) | Memenuhi: validasi field dan respons `400`/`401`/`409`/`429` terstruktur diuji. |
-
-## Perbaikan keamanan yang diterapkan
-
-1. Pendaftaran kini memakai `ConcurrentHashMap.putIfAbsent` melalui `saveIfAbsent`. Ini menutup race condition ketika dua request mendaftarkan email yang sama secara bersamaan.
-2. Password dibatasi hingga 72 byte UTF-8. BCrypt mengabaikan byte setelah batas ini; pembatasan mencegah dua password berbeda diperlakukan sama.
-3. Validasi password yang sama diterapkan saat login untuk mencegah payload terlalu besar mencapai BCrypt.
-4. Throttling lima kegagalan login dibatasi pada kombinasi email dan alamat klien langsung. Klien yang menyerang tidak dapat mengunci pengguna sah dari alamat lain. Respons lockout adalah `429` dan menyertakan `Retry-After`.
-5. CORS wildcard dihapus. Akses lintas-origin ditolak secara default sampai origin UI tepercaya didaftarkan secara eksplisit.
-6. Ditambahkan `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`, `Referrer-Policy: no-referrer`, dan cache response sensitif tidak disimpan.
-7. JSON yang tidak dapat diparse sekarang menghasilkan `400 Bad Request` tanpa detail parser internal.
+| Validation & Error Handling (10%) | Memenuhi: validasi field dan respons `400`/`401`/`409`/`429` terstruktur diuji.
 
 ## Skenario keamanan yang diuji
 
@@ -80,7 +70,3 @@ Format JSON juga didukung sebagai tambahan, tanpa mengubah dukungan `application
 - Jangan mengaktifkan logging DEBUG Spring MVC di produksi. Framework dapat memasukkan nilai input yang ditolak ke log debug. Konfigurasi aplikasi menetapkan log produksi pada INFO.
 - Pengujian HTTP dilakukan melalui `MockMvc` dengan Spring Security filter chain aktif. Menjalankan `mvn spring-boot:run` tidak dapat diverifikasi di sandbox ini karena Maven tidak diizinkan menulis artefak plugin yang belum ada ke `C:\Users\exery\.m2`; kegagalan tersebut bukan kegagalan kode aplikasi.
 - Pemindaian CVE dependency tidak dijalankan dalam pemeriksaan ini. Jalankan SCA terautentikasi di CI sebelum rilis publik.
-
-## Status publikasi repository
-
-Direktori kerja ini belum merupakan repository Git dan tidak memiliki remote tujuan. Koneksi GitHub telah diminta agar publikasi dapat dilakukan, tetapi belum terhubung pada sesi ini. Setelah koneksi disetujui, berikan URL repository publik tujuan atau pilih repository dari akun GitHub untuk melanjutkan push.
